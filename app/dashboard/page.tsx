@@ -73,23 +73,7 @@ const dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-indigo-600 rounded-3xl p-8 text-white flex flex-col justify-between">
-          <div>
-            <h3 className="text-xl font-bold mb-2">AI Insights</h3>
-            <p className="text-indigo-100 text-sm leading-relaxed">
-              Based on recent exam results, Computer Science 101 has shown a 15% increase in engagement. We recommend scheduling more TAs for the upcoming Mathematics workshop.
-            </p>
-          </div>
-          <div className="mt-8 space-y-4">
-             <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                <p className="text-xs uppercase font-bold text-indigo-200">System Alert</p>
-                <p className="text-sm font-medium mt-1">3 students have missing prerequisites for AI-202.</p>
-             </div>
-             <button className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-colors">
-               View All Reports
-             </button>
-          </div>
-        </div>
+    
       </div>
     </div>
   );

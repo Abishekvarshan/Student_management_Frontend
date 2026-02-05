@@ -10,6 +10,7 @@ export interface Student {
   id: string;
   name: string;
   email: string;
+  age: number;
   enrollmentDate: string;
   major: string;
   gpa: number;
@@ -26,19 +27,29 @@ export interface Lecturer {
   rating: number;
 }
 
-export interface Course {
-  id: string;
-  title: string;
-  code: string;
-  credits: number;
-  instructor: string;
-  enrolled: number;
-  category: string;
-}
 
 export interface DashboardStats {
   totalStudents: number;
   totalLecturers: number;
   totalCourses: number;
   avgAttendance: string;
+}
+
+
+export interface Course {
+  id: string;
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  description: string;
+  duration: string;
+}
+
+
+export interface CreateCourseDTO {
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  description: string;
+  duration: string;
 }

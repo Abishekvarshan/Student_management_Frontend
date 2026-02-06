@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import StudentList from "./StudentList";
 import StudentProfile from "./StudentProfile";

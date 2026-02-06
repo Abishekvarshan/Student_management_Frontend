@@ -23,6 +23,8 @@ const navItems: NavItem[] = [
   { href: "/student", label: "Profile", icon: ICONS.Students, roles: ["STUDENT"] },
   // Courses: ADMIN, LECTURER, STUDENT
   { href: "/courses", label: "Courses", icon: ICONS.Courses, roles: ["ADMIN", "LECTURER", "STUDENT"] },
+  // Admin: pending enrollment requests
+  { href: "/enrollments-requests", label: "Requests", icon: ICONS.Requests, roles: ["ADMIN"] },
   // Lectures: ADMIN, LECTURER
   { href: "/lectures", label: "Lectures", icon: ICONS.Lecturers, roles: ["ADMIN", "LECTURER"] },
 ];

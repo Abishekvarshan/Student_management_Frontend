@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Student } from "../types";
 import { api } from "../auth/http";
 import { useAuth } from "../auth/AuthProvider";
+import { fetchEnrollmentsByStudentId } from "../enrollments/api";
+import type { EnrollmentStatus, StudentEnrollment } from "../enrollments/types";
 
 type StudentFormInput = {
   id: string;
@@ -19,6 +21,7 @@ const StudentList: React.FC = () => {
 
   const [filter, setFilter] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
+  const [enrollmentsByStudentId, setEnrollmentsByStudentId] = useState<Record<string, StudentEnrollment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", age: "", email: "" });
@@ -50,9 +53,77 @@ const StudentList: React.FC = () => {
     }
   }, []);
 
+  const fetchEnrollmentsForVisibleStudents = useCallback(async (nextStudents: Student[]) => {
+    if (!canManageStudents) return;
+
+    // Fetch each student enrollments. Keep it simple (parallel) for now.
+    // If this becomes slow, we can add a backend endpoint for batch loading.
+    try {
+      const results = await Promise.all(
+        (nextStudents ?? []).map(async (s) => {
+          try {
+            const enrollments = await fetchEnrollmentsByStudentId(s.id);
+            return [s.id, enrollments] as const;
+          } catch {
+            return [s.id, [] as StudentEnrollment[]] as const;
+          }
+        })
+      );
+      const map: Record<string, StudentEnrollment[]> = {};
+      for (const [studentId, enrollments] of results) {
+        map[studentId] = enrollments ?? [];
+      }
+      setEnrollmentsByStudentId(map);
+    } catch (err) {
+      console.warn("Failed to fetch enrollments for students", err);
+      setEnrollmentsByStudentId({});
+    }
+  }, [canManageStudents]);
+
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
+
+  // When students list updates, load their enrollments for the Status/Enrollment columns
+  useEffect(() => {
+    if (!students || students.length === 0) return;
+    fetchEnrollmentsForVisibleStudents(students);
+  }, [students, fetchEnrollmentsForVisibleStudents]);
+
+  const getCourseNameFromEnrollment = (e: any): string | null => {
+    const name = e?.courseName ?? e?.course?.courseName ?? e?.course?.name;
+    return typeof name === "string" && name.trim() ? name : null;
+  };
+
+  const deriveStudentStatus = (enrollments: StudentEnrollment[]): EnrollmentStatus | null => {
+    if (!enrollments || enrollments.length === 0) return null;
+    // Priority: REQUESTED > APPROVED > REJECTED (so admin sees pending attention first)
+    const statuses = new Set(enrollments.map((e) => e.status));
+    if (statuses.has("REQUESTED")) return "REQUESTED";
+    if (statuses.has("APPROVED")) return "APPROVED";
+    if (statuses.has("REJECTED")) return "REJECTED";
+    return null;
+  };
+
+  const statusBadge = (status: EnrollmentStatus | null) => {
+    if (!status) {
+      return (
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase text-slate-600">
+          NONE
+        </span>
+      );
+    }
+    const cls =
+      status === "APPROVED"
+        ? "bg-emerald-50 text-emerald-600"
+        : status === "REQUESTED"
+        ? "bg-amber-50 text-amber-600"
+        : "bg-rose-50 text-rose-600";
+
+    return (
+      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${cls}`}>{status}</span>
+    );
+  };
 
   const handleCreateStudent = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -381,20 +452,25 @@ const StudentList: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`text-[11px] font-bold uppercase ${
-                          student.status === "Active"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : student.status === "On Leave"
-                            ? "bg-amber-50 text-amber-600"
-                            : "bg-slate-100 text-slate-600"
-                        } rounded-full px-2.5 py-1`}
-                      >
-                        {student.status}
-                      </span>
+                      {statusBadge(deriveStudentStatus(enrollmentsByStudentId[student.id] ?? []))}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {new Date(student.enrollmentDate).toLocaleDateString()}
+                      {(() => {
+                        const enrollments = enrollmentsByStudentId[student.id] ?? [];
+                        const approvedCourses = enrollments
+                          .filter((e) => e.status === "APPROVED")
+                          .map(getCourseNameFromEnrollment)
+                          .filter(Boolean) as string[];
+
+                        const requestedCourses = enrollments
+                          .filter((e) => e.status === "REQUESTED")
+                          .map(getCourseNameFromEnrollment)
+                          .filter(Boolean) as string[];
+
+                        const names = approvedCourses.length > 0 ? approvedCourses : requestedCourses;
+                        if (!names || names.length === 0) return "-";
+                        return names.join(", ");
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button

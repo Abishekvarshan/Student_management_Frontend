@@ -10,6 +10,18 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  // Never attach Bearer token to auth endpoints.
+  // This prevents backend JWT filters from rejecting login/register calls
+  // when the browser has a stale/invalid token in localStorage.
+  const url = config.url ?? "";
+  if (url.startsWith("/api/auth/")) {
+    if (config.headers && "Authorization" in config.headers) {
+      // @ts-expect-error - axios headers type can be complex
+      delete config.headers.Authorization;
+    }
+    return config;
+  }
+
   const stored = getToken();
   if (stored) {
     // Some backends return tokens with the `Bearer ` prefix already.

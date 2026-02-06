@@ -3,18 +3,35 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ICONS } from "./constants";
+import type { UserRole } from "../auth/types";
+import { useAuth } from "../auth/AuthProvider";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  roles?: UserRole[];
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: ICONS.Dashboard },
-  { href: "/student", label: "Students", icon: ICONS.Students },
-  { href: "/courses", label: "Courses", icon: ICONS.Courses },
-  { href: "/lectures", label: "Lecturers", icon: ICONS.Lecturers },
+  // Students: ADMIN, LECTURER (backend allows listing; student self-profile is separate)
+  { href: "/student", label: "Students", icon: ICONS.Students, roles: ["ADMIN", "LECTURER"] },
+  // Profile: STUDENT only (self view/edit)
+  { href: "/student", label: "Profile", icon: ICONS.Students, roles: ["STUDENT"] },
+  // Courses: ADMIN, LECTURER, STUDENT
+  { href: "/courses", label: "Courses", icon: ICONS.Courses, roles: ["ADMIN", "LECTURER", "STUDENT"] },
+  // Lectures: ADMIN, LECTURER
+  { href: "/lectures", label: "Lectures", icon: ICONS.Lecturers, roles: ["ADMIN", "LECTURER"] },
 ];
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const role = user?.role;
 
   return (
     <aside className="w-64 bg-slate-900 h-screen fixed left-0 top-0 text-white flex flex-col z-50">
@@ -26,7 +43,12 @@ const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex-1 space-y-2 px-4 py-6">
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => {
+            if (!item.roles) return true;
+            return role ? item.roles.includes(role) : false;
+          })
+          .map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -47,6 +69,23 @@ const Sidebar: React.FC = () => {
       </nav>
 
       <div className="p-6 border-t border-slate-800">
+        <div className="mb-4 rounded-2xl bg-slate-800/50 p-4">
+          <p className="text-xs text-slate-500 uppercase font-semibold mb-2">Signed in as</p>
+          <p className="text-sm font-semibold text-white">{user?.username ?? "Unknown"}</p>
+          <p className="text-xs text-slate-400">{user?.email ?? ""}</p>
+
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
+            className="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-950"
+          >
+            Logout
+          </button>
+        </div>
+
         <div className="bg-slate-800/50 rounded-2xl p-4">
           <p className="text-xs text-slate-500 uppercase font-semibold mb-2">Academic Year</p>
           <p className="text-sm font-medium">2024 / 2025</p>

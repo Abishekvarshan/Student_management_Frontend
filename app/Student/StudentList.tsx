@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Student } from "../types";
+import { api } from "../auth/http";
+import { useAuth } from "../auth/AuthProvider";
 
 type StudentFormInput = {
   id: string;
@@ -11,9 +12,11 @@ type StudentFormInput = {
   email: string;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
 const StudentList: React.FC = () => {
+  const { user } = useAuth();
+  const canManageStudents = user?.role === "ADMIN" || user?.role === "LECTURER";
+  const canDeleteStudents = user?.role === "ADMIN";
+
   const [filter, setFilter] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +33,13 @@ const StudentList: React.FC = () => {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const response = await axios.get<Student[]>(`${API_BASE_URL}/api/students`);
+      if (!canManageStudents) {
+        setStudents([]);
+        setError("You are not allowed to view the student directory.");
+        return;
+      }
+
+      const response = await api.get<Student[]>(`/api/students`);
 
       setStudents(response.data ?? []);
       setError(null);
@@ -49,6 +58,11 @@ const StudentList: React.FC = () => {
     event.preventDefault();
     setFormError(null);
 
+    if (!canManageStudents) {
+      setFormError("You are not allowed to create students.");
+      return;
+    }
+
     if (!formData.name.trim() || !formData.age.trim() || !formData.email.trim()) {
       setFormError("Please provide a name, age, and email.");
       return;
@@ -62,7 +76,7 @@ const StudentList: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      await axios.post(`${API_BASE_URL}/api/students`, {
+      await api.post(`/api/students`, {
         name: formData.name.trim(),
         age: ageValue,
         email: formData.email.trim()
@@ -92,6 +106,11 @@ const StudentList: React.FC = () => {
     event.preventDefault();
     setEditError(null);
 
+    if (!canManageStudents) {
+      setEditError("You are not allowed to update students.");
+      return;
+    }
+
     if (!editFormData.name.trim() || !editFormData.age.trim() || !editFormData.email.trim()) {
       setEditError("Please provide a name, age, and email.");
       return;
@@ -105,7 +124,7 @@ const StudentList: React.FC = () => {
 
     try {
       setIsEditSubmitting(true);
-      await axios.put(`${API_BASE_URL}/api/students/${editFormData.id}`, {
+      await api.put(`/api/students/${editFormData.id}`, {
         name: editFormData.name.trim(),
         age: ageValue,
         email: editFormData.email.trim()
@@ -122,13 +141,18 @@ const StudentList: React.FC = () => {
   const handleDeleteStudent = async (student: Student) => {
     setDeleteError(null);
 
+    if (!canDeleteStudents) {
+      setDeleteError("Only ADMIN can delete students.");
+      return;
+    }
+
     const confirmDelete = window.confirm(`Delete ${student.name}?`);
     if (!confirmDelete) {
       return;
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/students/${student.id}`);
+      await api.delete(`/api/students/${student.id}`);
       await fetchStudents();
     } catch (deleteError) {
       setDeleteError(deleteError instanceof Error ? deleteError.message : "Unable to delete student.");
@@ -155,6 +179,7 @@ const StudentList: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsFormOpen(true)}
+          disabled={!canManageStudents}
           className="rounded-full bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700"
         >
           + Add New Student
@@ -378,12 +403,14 @@ const StudentList: React.FC = () => {
                       >
                         Edit
                       </button>
-                      <button
-                        className="px-2 font-bold text-slate-400 transition-colors hover:text-rose-600"
-                        onClick={() => handleDeleteStudent(student)}
-                      >
-                        Delete
-                      </button>
+                      {canDeleteStudents && (
+                        <button
+                          className="px-2 font-bold text-slate-400 transition-colors hover:text-rose-600"
+                          onClick={() => handleDeleteStudent(student)}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { useRequireAuth } from "../auth/useRequireAuth";
 
 const data = [
   { name: 'Mon', students: 400, attendance: 240 },
@@ -13,6 +14,8 @@ const data = [
 ];
 
 const dashboard: React.FC = () => {
+  useRequireAuth();
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>

@@ -27,6 +27,20 @@ export interface Lecturer {
   rating: number;
 }
 
+/**
+ * Backend model: `lectures` table
+ * - name, department, rating, subjects (collection), codes (collection), contact
+ */
+export interface Lecture {
+  id: string;
+  name: string;
+  department: string;
+  rating: number;
+  subjects: string[];
+  codes: string[];
+  contact: string;
+}
+
 
 export interface DashboardStats {
   totalStudents: number;
